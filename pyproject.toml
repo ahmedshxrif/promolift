@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "promolift"
+version = "0.1.0"
+description = "Find where a discount pays for itself: price elasticity from sales history, and a promo budget plan."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ahmed Farahat" }]
+dependencies = []
+
+[project.scripts]
+promolift = "promolift.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
