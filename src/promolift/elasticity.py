@@ -17,6 +17,24 @@ from pathlib import Path
 from typing import Iterable
 
 
+# Two-sided 95% critical values of Student's t, for 1 to 30 degrees of freedom.
+_T95 = [
+    12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228,
+    2.201, 2.179, 2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086,
+    2.080, 2.074, 2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045, 2.042,
+]
+
+
+def t_critical(degrees: int) -> float:
+    """The multiplier for a 95% range. Few weeks means a wider range, so the table matters."""
+    if degrees < 1:
+        raise ValueError("need at least 1 degree of freedom")
+    if degrees <= len(_T95):
+        return _T95[degrees - 1]
+    z = 1.959964  # beyond the table, the usual series around the normal value is accurate enough
+    return z + (z**3 + z) / (4 * degrees) + (5 * z**5 + 16 * z**3 + 3 * z) / (96 * degrees**2)
+
+
 @dataclass(frozen=True)
 class Elasticity:
     sku: str
@@ -29,6 +47,12 @@ class Elasticity:
     """The highest price seen, taken as the regular price."""
     base_units: float
     """Typical weekly units at the regular price, read off the fitted line."""
+    std_error: float = 0.0
+    """Standard error of the elasticity: how far it would wander with another set of weeks."""
+    low: float = 0.0
+    """Lower end of the 95% range for the elasticity."""
+    high: float = 0.0
+    """Upper end of the 95% range for the elasticity."""
 
     @property
     def reliable(self) -> bool:
@@ -55,7 +79,11 @@ def fit_elasticity(sku: str, prices: Iterable[float], units: Iterable[float]) ->
     r_squared = 1 - residual / total if total > 1e-12 else 0.0
     base_price = max(p for p, _ in points)
     base_units = math.exp(intercept + slope * math.log(base_price))
-    return Elasticity(sku, slope, max(0.0, r_squared), n, base_price, base_units)
+    # Residual variance uses n - 2 because two numbers (slope and intercept) were fitted.
+    std_error = math.sqrt(residual / (n - 2) / spread_x)
+    half = t_critical(n - 2) * std_error
+    return Elasticity(sku, slope, max(0.0, r_squared), n, base_price, base_units,
+                      std_error, slope - half, slope + half)
 
 
 def read_sales(path: str | Path) -> dict[str, tuple[list[float], list[float]]]:

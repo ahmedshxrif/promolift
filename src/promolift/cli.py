@@ -18,12 +18,12 @@ def _table(headers: list[str], rows: list[list[str]]) -> str:
 def _fit(args: argparse.Namespace) -> int:
     fits, skipped = fit_all(args.sales)
     rows = [
-        [fit.sku, f"{fit.elasticity:.2f}", f"{fit.r_squared:.2f}", str(fit.observations),
+        [fit.sku, f"{fit.elasticity:.2f} ({fit.low:.1f} to {fit.high:.1f})", f"{fit.r_squared:.2f}", str(fit.observations),
          f"{best_discount(fit.elasticity, args.margin):.0%}",
          "yes" if fit.reliable else "check"]
         for fit in fits
     ]
-    print(_table(["product", "elasticity", "fit", "weeks", "best discount", "reliable"], rows))
+    print(_table(["product", "elasticity (95% range)", "fit", "weeks", "best discount", "reliable"], rows))
     for note in skipped:
         print(f"skipped: {note}", file=sys.stderr)
     return 0

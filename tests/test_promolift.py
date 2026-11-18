@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from promolift import best_discount, fit_all, fit_elasticity, plan_budget, profit_change, units_multiplier  # noqa: E402
+from promolift import best_discount, fit_all, fit_elasticity, plan_budget, profit_change, t_critical, units_multiplier  # noqa: E402
 
 SALES = ROOT / "examples" / "sales.csv"
 TRUE = {
@@ -33,6 +33,31 @@ class Elasticity(unittest.TestCase):
         for fit in fits:
             self.assertAlmostEqual(fit.elasticity, TRUE[fit.sku], delta=0.5, msg=fit.sku)
             self.assertTrue(fit.reliable, fit.sku)
+
+    def test_range_matches_a_case_worked_out_by_hand(self):
+        # log price 0..4 against log units 1,3,2,5,4: slope 0.8, residual sum 3.6,
+        # variance 3.6 / 3 = 1.2, standard error sqrt(1.2 / 10), t for 3 degrees = 3.182.
+        prices = [math.exp(x) for x in range(5)]
+        units = [math.exp(y) for y in (1, 3, 2, 5, 4)]
+        fit = fit_elasticity("x", prices, units)
+        half = 3.182 * math.sqrt(0.12)
+        self.assertAlmostEqual(fit.elasticity, 0.8, places=9)
+        self.assertAlmostEqual(fit.std_error, math.sqrt(0.12), places=9)
+        self.assertAlmostEqual(fit.low, 0.8 - half, places=9)
+        self.assertAlmostEqual(fit.high, 0.8 + half, places=9)
+
+    def test_exact_data_has_no_range(self):
+        fit = fit_elasticity("x", [100, 90, 80, 70, 60], [50 * (p / 100) ** -2.5 for p in (100, 90, 80, 70, 60)])
+        self.assertAlmostEqual(fit.high - fit.low, 0.0, places=6)
+
+    def test_range_contains_the_estimate_and_narrows_with_more_weeks(self):
+        fits, _ = fit_all(SALES)
+        for fit in fits:
+            self.assertLess(fit.low, fit.elasticity)
+            self.assertGreater(fit.high, fit.elasticity)
+        self.assertGreater(t_critical(3), t_critical(10))
+        self.assertGreater(t_critical(30), t_critical(100))
+        self.assertAlmostEqual(t_critical(100), 1.984, places=3)
 
     def test_a_price_that_never_moves_cannot_be_measured(self):
         with self.assertRaises(ValueError):
@@ -117,6 +142,8 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         for sku in TRUE:
             self.assertIn(sku, result.stdout)
+        self.assertIn("elasticity (95% range)", result.stdout)
+        self.assertRegex(result.stdout, r"-\d\.\d\d \(-\d\.\d to -\d\.\d\)")
 
     def test_plan_prints_the_summary(self):
         result = self.run_cli("plan", str(SALES), "--budget", "20000")

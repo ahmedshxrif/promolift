@@ -59,19 +59,20 @@ fridge-family-650,2,2609,72
 ```
 $ promolift fit examples/sales.csv
 
-product             elasticity  fit   weeks  best discount  reliable
-------------------  ----------  ----  -----  -------------  --------
-fridge-family-650   -5.47       0.99  26     14%            yes
-fridge-compact-300  -4.41       0.99  26     9%             yes
-washer-front-9kg    -3.44       0.96  26     1%             yes
-washer-top-12kg     -2.13       0.92  26     0%             yes
-ac-split-1.5t       -0.77       0.61  26     0%             yes
-dryer-heat-pump     -0.66       0.66  26     0%             yes
+product             elasticity (95% range)  fit   weeks  best discount  reliable
+------------------  ----------------------  ----  -----  -------------  --------
+fridge-family-650   -5.47 (-5.7 to -5.2)    0.99  26     14%            yes
+fridge-compact-300  -4.41 (-4.6 to -4.2)    0.99  26     9%             yes
+washer-front-9kg    -3.44 (-3.7 to -3.1)    0.96  26     1%             yes
+washer-top-12kg     -2.13 (-2.4 to -1.9)    0.92  26     0%             yes
+ac-split-1.5t       -0.77 (-1.0 to -0.5)    0.61  26     0%             yes
+dryer-heat-pump     -0.66 (-0.9 to -0.5)    0.66  26     0%             yes
 ```
 
 | Column | Meaning |
 |---|---|
 | elasticity | Percent change in sales for a 1% change in price. -5.47 means a 1% cut sells about 5.5% more |
+| 95% range | Where the true elasticity most likely lies. A wide range means the data is thin or noisy. Also on the `Elasticity` object as `low`, `high` and `std_error` |
 | fit | How much of the movement in sales the price explains, from 0 to 1 |
 | best discount | The discount at which profit peaks, at your margin |
 | reliable | At least 8 weeks of data, a fit of 0.5 or better, and a negative elasticity |
@@ -112,7 +113,7 @@ The sample data in `examples/` is generated from six products with known elastic
 | dryer-heat-pump | -0.6 | -0.66 |
 
 ```bash
-python -m unittest discover -s tests   # 19 tests
+python -m unittest discover -s tests   # 22 tests
 ```
 
 ## Limits, plainly
