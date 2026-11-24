@@ -79,6 +79,26 @@ dryer-heat-pump     -0.66 (-0.9 to -0.5)    0.66  26     0%             yes
 
 **Step 2: plan.** `promolift plan sales.csv --budget 20000` gives the table at the top. Options: `--margin 0.3` (share of the price that is profit) and `--max-discount 0.4`.
 
+**Step 3: export.** Both commands take `--format text|markdown|json`. Text is the default. Warnings still go to stderr, so the output on stdout stays clean.
+
+Markdown, for a report:
+
+```
+$ promolift fit examples/sales.csv --format markdown
+
+| product | elasticity (95% range) | fit | weeks | best discount | reliable |
+| --- | --- | --- | --- | --- | --- |
+| fridge-family-650 | -5.47 (-5.7 to -5.2) | 0.99 | 26 | 14% | yes |
+```
+
+JSON, for another tool (numbers are unrounded):
+
+```
+$ promolift plan examples/sales.csv --budget 20000 --format json
+
+{"lines": [{"sku": "fridge-family-650", "discount": 0.09, ...}], "budget": 20000.0, "spend": ..., "extra_profit": ..., "even_split_profit": ..., "gain_over_even_split": ...}
+```
+
 **Or from Python:**
 
 ```python
@@ -113,7 +133,7 @@ The sample data in `examples/` is generated from six products with known elastic
 | dryer-heat-pump | -0.6 | -0.66 |
 
 ```bash
-python -m unittest discover -s tests   # 22 tests
+python -m unittest discover -s tests   # 27 tests
 ```
 
 ## Limits, plainly

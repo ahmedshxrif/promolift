@@ -1,3 +1,4 @@
+import json
 import math
 import subprocess
 import sys
@@ -149,6 +150,39 @@ class CommandLine(unittest.TestCase):
         result = self.run_cli("plan", str(SALES), "--budget", "20000")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Gain from targeting", result.stdout)
+
+    def test_fit_as_json(self):
+        result = self.run_cli("fit", str(SALES), "--format", "json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual({p["sku"] for p in data["products"]}, set(TRUE))
+        first = data["products"][0]
+        self.assertLess(first["low"], first["elasticity"])
+        self.assertLess(first["elasticity"], first["high"])
+        self.assertIsInstance(first["reliable"], bool)
+
+    def test_fit_as_markdown(self):
+        lines = self.run_cli("fit", str(SALES), "--format", "markdown").stdout.splitlines()
+        self.assertTrue(lines[0].startswith("| product | elasticity (95% range)"))
+        self.assertEqual(lines[1], "| " + " | ".join(["---"] * 6) + " |")
+        self.assertEqual(len(lines), 2 + len(TRUE))
+
+    def test_plan_as_json(self):
+        result = self.run_cli("plan", str(SALES), "--budget", "20000", "--format", "json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["budget"], 20000)
+        self.assertEqual(len(data["lines"]), len(TRUE))
+        self.assertAlmostEqual(data["gain_over_even_split"], data["extra_profit"] - data["even_split_profit"])
+
+    def test_plan_as_markdown(self):
+        result = self.run_cli("plan", str(SALES), "--budget", "20000", "--format", "markdown")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("| product | discount | spend | extra units | extra profit |", result.stdout)
+        self.assertIn("- **Gain from targeting:**", result.stdout)
+
+    def test_an_unknown_format_is_refused(self):
+        self.assertEqual(self.run_cli("fit", str(SALES), "--format", "xml").returncode, 2)
 
     def test_a_missing_file_is_a_clean_error(self):
         result = self.run_cli("fit", "nope.csv")
